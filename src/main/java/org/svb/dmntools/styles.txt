@@ -1,0 +1,21 @@
+Private Const TEMPLATE_FMT = "Policy Modeling {version} Excel Addin.xlam"
+
+' OPM Styles
+Private Const OPM_ATTRIBUTE_TEXT_HEADING_STYLE As String = "OPM - Attribute Text Heading"
+Private Const OPM_ATTRIBUTE_TEXT_STYLE As String = "OPM - Attribute Text"
+Private Const OPM_ATTRIBUTE_TYPE_HEADING_STYLE As String = "OPM - Attribute Type Heading"
+Private Const OPM_ATTRIBUTE_TYPE_STYLE As String = "OPM - Attribute Type"
+Private Const OPM_LEGEND_KEY_HEADING_STYLE As String = "OPM - Legend Key Heading"
+Private Const OPM_LEGEND_KEY_STYLE As String = "OPM - Legend Key"
+
+
+Private Const OPM_COMMENTARY_STYLE As String = "OPM - Commentary"
+Private Const OPM_CONCLUSION_HEADING_STYLE As String = "OPM - Conclusion Heading"
+Private Const OPM_CONCLUSION_STYLE As String = "OPM - Conclusion"
+Private Const OPM_CONDITION_HEADING_STYLE As String = "OPM - Condition Heading"
+Private Const OPM_CONDITION_STYLE As String = "OPM - Condition"
+Private Const OPM_ELSE_STYLE As String = "OPM - Else"
+
+Private Const OPM_TRANSLATION_STYLE As String = "OPM - Translation"
+Private Const OPM_IGNORE_TRANSLATION_STYLE = "OPM - Ignore"
+Private Const OPM_TRANSLATION_HEADER = "OPM - Header"
