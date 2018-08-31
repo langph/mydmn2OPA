@@ -3,8 +3,10 @@ package org.svb.dmntools;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
+
 import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.model.StylesTable;
 import org.apache.poi.xssf.usermodel.*;
@@ -24,8 +26,9 @@ public class opmWorkbook {
     private XSSFCellStyle OPM_CONDITION_STYLE;
     private XSSFCellStyle OPM_CONCLUSION_STYLE;
     private XSSFCellStyle OPM_ELSE_STYLE;
+    private XSSFCellStyle OPM_COMMENTARY_STYLE;
     private int row; // the current row number
-    private List<TInputClause> intervalHeaders; // headers from conditions with intervals -> i.e. [19..25] or (19..25]
+    private List<TInputClause> intervalHeaders = new ArrayList<TInputClause>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
     private int condRows; //number of condition rows
 
     static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
@@ -81,6 +84,7 @@ public class opmWorkbook {
             XSSFSheet sheet = this.workbook.createSheet(dec.getName());
             // Hitpolicy moet unique zijn
             this.getIntervalHeaders(dectable);
+            this.createCommentaryID(dectable,sheet);
             this.createTableHeaders(dectable, sheet);
             this.createTableFields(dectable, sheet);
         }
@@ -93,6 +97,19 @@ public class opmWorkbook {
         this.OPM_CONCLUSION_STYLE = getNamedCellStyle(this.workbook, "OPM - Conclusion");
         this.OPM_CONDITION_STYLE = getNamedCellStyle(this.workbook, "OPM - Condition");
         this.OPM_ELSE_STYLE = getNamedCellStyle(this.workbook, "OPM - Else");
+        this.OPM_COMMENTARY_STYLE = getNamedCellStyle(this.workbook, "OPM - Commentary");
+    }
+
+    private void createCommentaryID(TDecisionTable dectable, XSSFSheet sheet) {
+
+        int rowcell = 1;
+        XSSFCell commentCell;
+
+        this.tableRow = sheet.createRow(this.row++);
+        commentCell = this.tableRow.createCell(rowcell);
+        commentCell.setCellStyle(this.OPM_COMMENTARY_STYLE);
+        commentCell.setCellValue(dectable.getId());
+
     }
 
     private void getIntervalHeaders(TDecisionTable dectable){
@@ -105,8 +122,10 @@ public class opmWorkbook {
         for (TDecisionRule r : decrules) {
             for (TUnaryTests t : r.getInputEntry()) {
                 if (t.getText().contains("..")) {
-                    testIndex = decrules.indexOf(r);
-                    intervalHeaders.add(conditionheaders.get(testIndex));
+                    testIndex = r.getInputEntry().indexOf(t);
+                    if (!this.intervalHeaders.contains(conditionheaders.get(testIndex))){
+                        this.intervalHeaders.add(conditionheaders.get(testIndex));
+                    }
                 }
             }
         }
@@ -137,7 +156,7 @@ public class opmWorkbook {
                     this.condRows++;
                     condCell = this.tableRow.createCell(rowcell++);
                     condCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
-                    headerRegion = new CellRangeAddress(1, 1, rowcell - 1, rowcell);
+                    headerRegion = new CellRangeAddress(1, 1, rowcell - 2, rowcell - 1);
                     sheet.addMergedRegion(headerRegion);
                 }
             }
@@ -156,49 +175,53 @@ public class opmWorkbook {
         }
     }
 
-    private void createConditionRow(TDecisionRule r, XSSFSheet sheet){
+    private void createConditionRow(TDecisionTable dectable, TDecisionRule r, XSSFSheet sheet){
 
         XSSFCell condCell;
+        XSSFCell condCellRightPart;
         String leftPart;
         String rightPart;
         String leftInterval;
         String rightInterval;
+        int testIndex;
         int dashIndex;
         int rowcell = 1;
+        List<TInputClause> conditionheaders = dectable.getInput();
 
         this.tableRow = sheet.createRow(this.row++);
 
         for (TUnaryTests t : r.getInputEntry()) {
             condCell = this.tableRow.createCell(rowcell++);
             condCell.setCellStyle(this.OPM_CONDITION_STYLE);
+            testIndex = r.getInputEntry().indexOf(t);
 
             if(t.getText().length() == 1 && t.getText().indexOf("-") == 0 ){
                 // Write nothing
-            } else if(t.getText().contains("..")) {
-                // interval - make to parts
-                //TODO  interval <= < etc   --- "[" = ">=", "]" = "<="  "(" = ">" , ")" = "<"
-                dashIndex = t.getText().indexOf("..");
-                if ((t.getText().substring(0,1)) == "[") {
-                    leftInterval = ">=";
-                } else { leftInterval = ">";}
+            } else if(!this.intervalHeaders.isEmpty()) { //there are intervals
+                if (this.intervalHeaders.contains(conditionheaders.get(testIndex))){//there are intervals in this column
+                    condCellRightPart = this.tableRow.createCell(rowcell++);
+                    condCellRightPart.setCellStyle(this.OPM_CONDITION_STYLE);
+                    if (t.getText().contains("..")){ // there are intervals in this row
+                        //interval <= < etc   --- "[" = ">=", "]" = "<="  "(" = ">" , ")" = "<"
+                        dashIndex = t.getText().indexOf("..");
+                        if ((t.getText().substring(0,1)) == "[") {
+                            leftInterval = ">=";
+                        } else { leftInterval = ">";}
+                        if ((t.getText().substring(dashIndex+1,dashIndex+2)) == "]") {
+                            rightInterval = "<=";
+                        } else { rightInterval = "<";}
 
-                if ((t.getText().substring(dashIndex+1,dashIndex+2)) == "]") {
-                    rightInterval = "<=";
-
-                } else { rightInterval = "<";}
-
-                leftPart = t.getText().substring(1,dashIndex -1);
-                condCell.setCellValue(leftInterval+leftPart);
-                rightPart = t.getText().substring(dashIndex+2,t.getText().length()-1);
-                condCell = this.tableRow.createCell(rowcell++);
-                condCell.setCellStyle(this.OPM_CONDITION_STYLE);
-                condCell.setCellValue(rightInterval+rightPart);
-
+                        leftPart = t.getText().substring(1,dashIndex);
+                        condCell.setCellValue(leftInterval+leftPart);
+                        rightPart = t.getText().substring(dashIndex+2,t.getText().length()-1);
+                        condCellRightPart.setCellValue(rightInterval+rightPart);
+                    } else {condCell.setCellValue(t.getText()); }
+                }
             } else { condCell.setCellValue(t.getText());}
         }
     }
 
-    private void createConclusionRow(TDecisionTable dectable, TDecisionRule r, XSSFSheet sheet){
+    private void createConclusionRow(TDecisionRule r){
 
         XSSFCell conclCell;
         int rowcell = this.condRows + 1;
@@ -217,8 +240,8 @@ public class opmWorkbook {
 
         List<TDecisionRule> decrules = dectable.getRule();
         for (TDecisionRule r : decrules) {
-            this.createConditionRow(r, sheet);
-            this.createConclusionRow(dectable, r, sheet);
+            this.createConditionRow(dectable, r, sheet);
+            this.createConclusionRow(r);
         }
 
         // Else uncertain
