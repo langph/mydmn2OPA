@@ -19,15 +19,27 @@ public class TestWindow extends JPanel implements ActionListener {
     JButton selectDMNFile;
     JFileChooser chooser;
     String choosertitle;
+    JLabel result;
 
     public TestWindow() {
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(2, 2, 2, 2);
+
         selectDMNFile = new JButton("Select DMN File");
+        result = new JLabel("Completed", JLabel.CENTER);
         selectDMNFile.addActionListener(this);
-        add(selectDMNFile); }
+        add(selectDMNFile,gbc);
+        gbc.gridy = 1;
+        add(result,gbc);
+        result.setVisible(false);
+    }
 
         public void actionPerformed(ActionEvent e) {
-            int result;
 
+            result.setVisible(false);
             chooser = new JFileChooser();
             FileNameExtensionFilter filter = new FileNameExtensionFilter("DMN Files", "dmn");
             chooser.setCurrentDirectory(new java.io.File("/Users/philipdelang/Documents"));
@@ -57,6 +69,7 @@ public class TestWindow extends JPanel implements ActionListener {
                     List<JAXBElement<? extends TDRGElement>> jes;
                     jes = dmndef.getDrgElement();
                     work.createOpmWorkbook(opaExcelTemplate, opaExcelfile, jes);
+                    result.setVisible(true);
 
                 } catch (Exception ex) {
                     System.out.println(ex);
