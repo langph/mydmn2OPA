@@ -20,21 +20,25 @@ public class TestWindow extends JPanel implements ActionListener {
     JFileChooser chooser;
     String choosertitle;
     JLabel result;
+    JLabel path;
+    JTextField pathToDocumentsFolder;
 
     public TestWindow() {
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(2, 2, 2, 2);
-
         selectDMNFile = new JButton("Select DMN File");
+        pathToDocumentsFolder = new JTextField("/Users/philipdelang/Documents",20);
+        path = new JLabel("Path to Excel template");
+        path.setLabelFor(pathToDocumentsFolder);
         result = new JLabel("Completed", JLabel.CENTER);
+        setLayout(new SpringLayout());
+        add(path);
+        add(pathToDocumentsFolder);
         selectDMNFile.addActionListener(this);
-        add(selectDMNFile,gbc);
-        gbc.gridy = 1;
-        add(result,gbc);
+        add(selectDMNFile);
+        add(result);
         result.setVisible(false);
+
+
     }
 
         public void actionPerformed(ActionEvent e) {
@@ -42,7 +46,7 @@ public class TestWindow extends JPanel implements ActionListener {
             result.setVisible(false);
             chooser = new JFileChooser();
             FileNameExtensionFilter filter = new FileNameExtensionFilter("DMN Files", "dmn");
-            chooser.setCurrentDirectory(new java.io.File("/Users/philipdelang/Documents"));
+            chooser.setCurrentDirectory(new java.io.File(pathToDocumentsFolder.getText()));
             chooser.setDialogTitle(choosertitle);
             chooser.setFileFilter(filter);
             chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);

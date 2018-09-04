@@ -10,8 +10,8 @@ class TestDmn2{
 
     public static void main(String[] args) {
 
-        JFrame frame = new JFrame("");
-        TestWindow panel = new TestWindow();
+
+        JFrame frame = new JFrame("DMN to OPA Excel");
         frame.addWindowListener(
                 new WindowAdapter() {
                     public void windowClosing(WindowEvent e) {
@@ -19,8 +19,19 @@ class TestDmn2{
                     }
                 }
         );
-        frame.getContentPane().add(panel,"Center");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        TestWindow panel = new TestWindow();
+        panel.setLayout(new SpringLayout());
+
+        SpringUtilities.makeCompactGrid(panel,
+                2, 2,  //rows, cols
+                6, 6,  //initX, initY
+                6, 6); //xPad, yPad
         frame.setSize(panel.getPreferredSize());
+        frame.setSize(400, 100);
+        frame.setLocation(150, 100);
+        frame.getContentPane().add(panel,"Center");
         frame.setVisible(true);
     }
 

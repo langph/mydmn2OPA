@@ -154,7 +154,7 @@ public class opmWorkbook {
                     this.condRows++;
                     condCell = this.tableRow.createCell(rowcell++);
                     condCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
-                    headerRegion = new CellRangeAddress(1, 1, rowcell - 2, rowcell - 1);
+                    headerRegion = new CellRangeAddress(2, 2, rowcell - 2, rowcell - 1);
                     sheet.addMergedRegion(headerRegion);
                 }
             }
