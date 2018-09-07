@@ -13,7 +13,10 @@ import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCellStyles;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTStylesheet;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTXf;
 import org.svb.dmn11.*;
+
+import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
+import javax.xml.bind.Unmarshaller;
 
 public class opmWorkbook {
 
@@ -48,6 +51,25 @@ public class opmWorkbook {
             }
         }
         return workbook.getCellStyleAt(0); //if nothing found return default cell style
+    }
+
+    public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile){
+
+        opmWorkbook work = new opmWorkbook();
+
+        try {
+
+            JAXBContext jc = JAXBContext.newInstance("org.svb.dmn11");
+            Unmarshaller u = jc.createUnmarshaller();
+            JAXBElement je = (JAXBElement) u.unmarshal(xmlFile);
+            TDefinitions dmndef = (TDefinitions) je.getValue();
+            List<JAXBElement<? extends TDRGElement>> jes;
+            jes = dmndef.getDrgElement();
+            work.createOpmWorkbook(opaExcelTemplate, opaExcelfile, jes);
+
+        } catch (Exception ex) {
+            System.out.println(ex);
+        }
     }
 
     public void createOpmWorkbook(File fileNametemplate, File fileNameOut, List<JAXBElement <? extends TDRGElement>> jes) throws IOException {

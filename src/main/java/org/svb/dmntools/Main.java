@@ -24,7 +24,7 @@ class TestDmn2{
         TestWindow panel = new TestWindow();
         panel.setLayout(new SpringLayout());
 
-        SpringUtilities.makeCompactGrid(panel,
+       SpringUtilities.makeCompactGrid(panel,
                 2, 2,  //rows, cols
                 6, 6,  //initX, initY
                 6, 6); //xPad, yPad
