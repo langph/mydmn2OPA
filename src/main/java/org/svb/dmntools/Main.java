@@ -1,15 +1,30 @@
 package org.svb.dmntools;
 
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.*;
+import java.awt.event.*;
 import org.svb.dmnToolWindow.*;
 
 
-class TestDmn2{
+class DMNToOPA {
 
     public static void main(String[] args) {
 
+        JMenuBar menubar = new JMenuBar();
+        JMenu file = new JMenu("File");
+        file.setMnemonic(KeyEvent.VK_F);
+        JMenu help = new JMenu("Help");
+        help.setMnemonic(KeyEvent.VK_H);
+        JMenuItem about = new JMenuItem("About");
+        help.add(about);
+        about.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent event) {
+                AboutDialog ad = new AboutDialog();
+                ad.setVisible(true);
+            }
+        });
+
+        menubar.add(file);
+        menubar.add(help);
 
         JFrame frame = new JFrame("DMN to OPA Excel");
         frame.addWindowListener(
@@ -20,8 +35,9 @@ class TestDmn2{
                 }
         );
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setJMenuBar(menubar);
 
-        TestWindow panel = new TestWindow();
+        MainWindow panel = new MainWindow();
         panel.setLayout(new SpringLayout());
 
        SpringUtilities.makeCompactGrid(panel,
@@ -29,7 +45,7 @@ class TestDmn2{
                 6, 6,  //initX, initY
                 6, 6); //xPad, yPad
         frame.setSize(panel.getPreferredSize());
-        frame.setSize(400, 100);
+        frame.setSize(400, 120);
         frame.setLocation(150, 100);
         frame.getContentPane().add(panel,"Center");
         frame.setVisible(true);

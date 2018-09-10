@@ -8,7 +8,7 @@ import java.awt.event.*;
 import java.awt.*;
 import java.io.File;
 
-public class TestWindow extends JPanel implements ActionListener {
+public class MainWindow extends JPanel implements ActionListener {
 
     JButton selectDMNFile;
     JFileChooser chooser;
@@ -17,7 +17,7 @@ public class TestWindow extends JPanel implements ActionListener {
     JLabel path;
     JTextField pathToDocumentsFolder;
 
-    public TestWindow() {
+    public MainWindow() {
 
         chooser = new JFileChooser();
         selectDMNFile = new JButton("Select DMN File");
