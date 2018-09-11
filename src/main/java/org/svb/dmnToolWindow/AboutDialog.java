@@ -20,14 +20,14 @@ public class AboutDialog extends JDialog {
         add(Box.createRigidArea(new Dimension(0, 10)));
         JLabel name = new JLabel("DMN to OPA excel");
         name.setAlignmentX(0.5f);
-        JLabel version = new JLabel("Version: 0.8");
+        JLabel version = new JLabel("Version: 0.81");
         version.setAlignmentX(0.5f);
         JLabel author = new JLabel("By: Philip de Lang");
         author.setAlignmentX(0.5f);
         add(name);
         add(version);
         add(author);
-        add(Box.createRigidArea(new Dimension(0, 80)));
+        add(Box.createRigidArea(new Dimension(0, 60)));
         JButton close = new JButton("Close");
         close.setAlignmentX(0.5f);
         add(close);

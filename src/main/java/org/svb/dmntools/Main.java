@@ -45,7 +45,7 @@ class DMNToOPA {
                 6, 6,  //initX, initY
                 6, 6); //xPad, yPad
         frame.setSize(panel.getPreferredSize());
-        frame.setSize(400, 120);
+        frame.setSize(400, 130);
         frame.setLocation(150, 100);
         frame.getContentPane().add(panel,"Center");
         frame.setVisible(true);
