@@ -1,0 +1,52 @@
+<functions>
+    <function>
+        <feel>contains([a],[b])</feel>
+        <opa>Contains([a],[b])</opa>
+        <arg>2</arg>
+    </function>
+    <function>
+        <feel>lower case([a])</feel>
+        <opa>Lower([a])</opa>
+        <arg>1</arg>
+    </function>
+    <function>
+        <feel>upper case([a])</feel>
+        <opa>Upper([a])</opa>
+        <arg>1</arg>
+    </function>
+    <function>
+        <feel>starts with([a],[b])</feel>
+        <opa>StartsWith([a],[b])</opa>
+        <arg>2</arg>
+    </function>
+    <function>
+        <feel>ends with([a],[b])</feel>
+        <opa>EndsWith([a],[b])</opa>
+        <arg>2</arg>
+    </function>
+    <function>
+        <feel>string([a])</feel>
+        <opa>Text([a])</opa>
+        <arg>1</arg>
+    </function>
+    <function>
+        <feel>string length([a])</feel>
+        <opa>Length([a])</opa>
+        <arg>1</arg>
+    </function>
+    <function>
+        <feel>substring([a],[b],[c])</feel>
+        <opa>Substring([a],[b],[c])</opa>
+        <arg>3</arg>
+    </function>
+    <function>
+        <feel>date([a])</feel>
+        <opa>Date([a])</opa>
+        <arg>1</arg>
+    </function>
+   <function>
+       <feel>date([a],[b],[c])</feel>
+       <opa>Date([a],[b],[c])</opa>
+       <arg>3</arg>
+   </function>
+</functions>

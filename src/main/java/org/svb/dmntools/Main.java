@@ -9,6 +9,16 @@ class DMNToOPA {
 
     public static void main(String[] args) {
 
+
+        FunctionTranslator.readFunctionFile();
+        initialiseMainWindow();
+
+
+    }
+
+
+    private static void initialiseMainWindow(){
+
         JMenuBar menubar = new JMenuBar();
         JMenu file = new JMenu("File");
         file.setMnemonic(KeyEvent.VK_F);
@@ -40,7 +50,7 @@ class DMNToOPA {
         MainWindow panel = new MainWindow();
         panel.setLayout(new SpringLayout());
 
-       SpringUtilities.makeCompactGrid(panel,
+        SpringUtilities.makeCompactGrid(panel,
                 2, 2,  //rows, cols
                 6, 6,  //initX, initY
                 6, 6); //xPad, yPad
@@ -49,6 +59,7 @@ class DMNToOPA {
         frame.setLocation(150, 100);
         frame.getContentPane().add(panel,"Center");
         frame.setVisible(true);
+
     }
 
 }

@@ -56,6 +56,7 @@ public class opmWorkbook {
     public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile){
 
         opmWorkbook work = new opmWorkbook();
+        FunctionTranslator[] fun;
 
         try {
 
