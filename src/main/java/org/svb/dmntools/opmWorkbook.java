@@ -31,12 +31,16 @@ public class opmWorkbook {
     private int row; // the current row number
     private List<TInputClause> intervalHeaders = new ArrayList<TInputClause>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
     private int condRows; //number of condition rows
+    private static FunctionTranslator ft;
 
     static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
 
         StylesTable stylestable = workbook.getStylesSource();
         CTStylesheet ctstylesheet = stylestable.getCTStylesheet();
         CTCellStyles ctcellstyles = ctstylesheet.getCellStyles();
+
+        ft = FunctionTranslator.readFunctionFile();
+
         if (ctcellstyles != null) {
             int i = 0;
             XSSFCellStyle style = null;
@@ -236,9 +240,9 @@ public class opmWorkbook {
                         condCell.setCellValue(leftInterval+leftPart);
                         rightPart = t.getText().substring(dashIndex+2,t.getText().length()-1);
                         condCellRightPart.setCellValue(rightInterval+rightPart);
-                    } else {condCell.setCellValue(t.getText()); }
+                    } else {condCell.setCellValue(ft.transformFunctions(t.getText())); }
                 }
-            } else { condCell.setCellValue(t.getText());}
+            } else { condCell.setCellValue(ft.transformFunctions(t.getText()));}
         }
     }
 

@@ -6,7 +6,7 @@ public class Function {
 
     private String feelFunction;
     private String opaFunction;
-    private Integer Arguments;
+    private Integer arguments;
 
     public String getFeelFunction() {
         return feelFunction;
@@ -30,12 +30,17 @@ public class Function {
     }
 
     public Integer getArguments() {
-        return Arguments;
+        return arguments;
     }
 
     @XmlElement(name = "arg")
     public void setArguments(Integer arguments) {
-        Arguments = arguments;
+        this.arguments = arguments;
     }
 
+    public String getFeelFunctionName(){
+
+        return this.feelFunction.substring(0,(this.feelFunction.indexOf("(")));
+
+    }
 }

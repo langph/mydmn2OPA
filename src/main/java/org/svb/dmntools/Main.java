@@ -10,7 +10,6 @@ class DMNToOPA {
     public static void main(String[] args) {
 
 
-        FunctionTranslator.readFunctionFile();
         initialiseMainWindow();
 
 
