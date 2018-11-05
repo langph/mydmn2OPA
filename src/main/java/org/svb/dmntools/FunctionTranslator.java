@@ -29,9 +29,7 @@ public class FunctionTranslator {
             this.functions = new ArrayList<Function>();
         }
         this.functions.add(function);
-
     }
-
 
     public static FunctionTranslator readFunctionFile(){
 
@@ -55,14 +53,22 @@ public class FunctionTranslator {
 
     public String transformFunctions(String inputDMN){
 
+
         List<Function> matchedFunctions = new ArrayList<Function>();
-        String transformedInput = "";
+        String transformedInput = inputDMN;
 
         matchedFunctions = this.matchFunctions(inputDMN);
 
         for (Function fu: matchedFunctions ){
-           transformedInput =  this.transformFunction(fu, inputDMN);
+            transformedInput = transformedInput.replace(fu.getFeelFunctionName(),fu.getOpaFunctionName());
         }
+
+        transformedInput = transformedInput.replace(",",";");
+        transformedInput = transformedInput.replace(".", "," );
+
+        //for (Function fu: matchedFunctions ){
+        //   transformedInput =  this.transformFunction(fu, inputDMN);
+        //}
 
         return  transformedInput;
     }
@@ -71,7 +77,7 @@ public class FunctionTranslator {
 
 
         List<List<String>> functionArguments = new ArrayList<List<String>>();
-        List<String> argsId = Arrays.asList("a","b","c",",d","e","f");
+        List<String> argsId = Arrays.asList("a","b","c",",d","e","f"); // finite number, no functions with more than 4 arguments
         List<String> functionArgument;
         int leftCharacterIndex;
         int rightCharacterIndex;

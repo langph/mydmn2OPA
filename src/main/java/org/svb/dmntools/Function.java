@@ -43,4 +43,9 @@ public class Function {
         return this.feelFunction.substring(0,(this.feelFunction.indexOf("(")));
 
     }
+
+    public String getOpaFunctionName(){
+
+        return this.opaFunction.substring(0,(this.opaFunction.indexOf("(")));
+    }
 }
