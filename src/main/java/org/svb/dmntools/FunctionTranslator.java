@@ -13,11 +13,8 @@ import javax.xml.bind.Unmarshaller;
 
 @XmlRootElement(name = "functions")
 public class FunctionTranslator {
-    List<Function> functions;
+    private List<Function> functions;
 
-    public List<Function> getFunctions() {
-        return functions;
-    }
 
     @XmlElement(name = "function")
     public void setFunctions(List<Function> functions) {
@@ -26,16 +23,16 @@ public class FunctionTranslator {
 
     public void add(Function function) {
         if (this.functions == null) {
-            this.functions = new ArrayList<Function>();
+            this.functions = new ArrayList<>();
         }
         this.functions.add(function);
     }
 
-    public static FunctionTranslator readFunctionFile(){
+    static FunctionTranslator readFunctionFile(String folder){
 
         try {
 
-            File file = new File("./src/main/functions.xml");
+            File file = new File( folder + "/functions.xml");
             JAXBContext jaxbContext = JAXBContext.newInstance(FunctionTranslator.class);
 
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
@@ -51,10 +48,10 @@ public class FunctionTranslator {
         return null;
     }
 
-    public String transformFunctions(String inputDMN){
+    String transformFunctions(String inputDMN){
 
 
-        List<Function> matchedFunctions = new ArrayList<Function>();
+        List<Function> matchedFunctions;
         String transformedInput = inputDMN;
 
         matchedFunctions = this.matchFunctions(inputDMN);
@@ -75,8 +72,12 @@ public class FunctionTranslator {
 
     private String transformFunction(Function matchedFunction, String inputDMN){
 
-
-        List<List<String>> functionArguments = new ArrayList<List<String>>();
+        // This function is incomplete, does not work with functions inside functions and with
+        // functions with the same name, but with a different number of parameters.
+        // Making this function work is complex, therefore a more easy approach is chosen for now
+        // that only replaces function names.
+        
+        List<List<String>> functionArguments = new ArrayList<>();
         List<String> argsId = Arrays.asList("a","b","c",",d","e","f"); // finite number, no functions with more than 4 arguments
         List<String> functionArgument;
         int leftCharacterIndex;
@@ -84,6 +85,7 @@ public class FunctionTranslator {
         int functionIndex;
         String argument;
         String DMN;
+
 
         // find feel function
         functionIndex = inputDMN.indexOf(matchedFunction.getFeelFunctionName());
@@ -102,7 +104,7 @@ public class FunctionTranslator {
                 rightCharacterIndex = inputDMN.indexOf(",", functionIndex);
             }
             // make array
-            functionArgument = new ArrayList<String>(2);
+            functionArgument = new ArrayList<>(2);
             // find and fill array items
             functionArgument.add("[" + argsId.get(i) + "]");
             argument = inputDMN.substring(leftCharacterIndex + 1, rightCharacterIndex );
@@ -132,11 +134,11 @@ public class FunctionTranslator {
 
     private List<Function> matchFunctions(String inputDMN){
 
-        List<Function> matchedFunctions = new ArrayList<Function>();
+        List<Function> matchedFunctions = new ArrayList<>();
         // search for matches in input string
 
         for (Function fu : this.functions){
-            if (inputDMN.indexOf(fu.getFeelFunctionName())!= -1) {
+            if (inputDMN.contains(fu.getFeelFunctionName())) {
                 matchedFunctions.add(fu);
             }
         }

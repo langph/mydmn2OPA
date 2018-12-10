@@ -31,7 +31,8 @@ public class opmWorkbook {
     private int row; // the current row number
     private List<TInputClause> intervalHeaders = new ArrayList<TInputClause>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
     private int condRows; //number of condition rows
-    private static FunctionTranslator ft;
+    private FunctionTranslator ft;
+
 
     static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
 
@@ -39,7 +40,6 @@ public class opmWorkbook {
         CTStylesheet ctstylesheet = stylestable.getCTStylesheet();
         CTCellStyles ctcellstyles = ctstylesheet.getCellStyles();
 
-        ft = FunctionTranslator.readFunctionFile();
 
         if (ctcellstyles != null) {
             int i = 0;
@@ -57,10 +57,10 @@ public class opmWorkbook {
         return workbook.getCellStyleAt(0); //if nothing found return default cell style
     }
 
-    public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile){
+    public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile, FunctionTranslator ft){
 
         opmWorkbook work = new opmWorkbook();
-        FunctionTranslator[] fun;
+        this.ft = ft;
 
         try {
 

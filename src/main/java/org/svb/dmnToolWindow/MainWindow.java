@@ -1,6 +1,7 @@
 package org.svb.dmnToolWindow;
 
 
+import org.svb.dmntools.FunctionTranslator;
 import org.svb.dmntools.opmWorkbook;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -16,6 +17,7 @@ public class MainWindow extends JPanel implements ActionListener {
     JLabel result;
     JLabel path;
     JTextField pathToDocumentsFolder;
+    FunctionTranslator ft;
 
     public MainWindow() {
 
@@ -60,7 +62,9 @@ public class MainWindow extends JPanel implements ActionListener {
             File opaExcelfile = new File(SelectedDir + "/" + DMNfile.getName() + ".xlsx");
             File xmlFile = DMNfile;
 
-            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile);
+            ft = FunctionTranslator.readFunctionFile(SelectedDir);
+
+            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
             result.setVisible(true);
         }
     }
