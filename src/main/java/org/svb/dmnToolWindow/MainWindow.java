@@ -17,7 +17,7 @@ public class MainWindow extends JPanel implements ActionListener {
     JLabel result;
     JLabel path;
     JTextField pathToDocumentsFolder;
-    FunctionTranslator ft;
+
 
     public MainWindow() {
 
@@ -62,9 +62,9 @@ public class MainWindow extends JPanel implements ActionListener {
             File opaExcelfile = new File(SelectedDir + "/" + DMNfile.getName() + ".xlsx");
             File xmlFile = DMNfile;
 
-            ft = FunctionTranslator.readFunctionFile(SelectedDir);
+            FunctionTranslator.readFunctionFile(SelectedDir);
 
-            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
+            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile);
             result.setVisible(true);
         }
     }

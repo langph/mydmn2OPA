@@ -14,6 +14,7 @@ import javax.xml.bind.Unmarshaller;
 @XmlRootElement(name = "functions")
 public class FunctionTranslator {
     private List<Function> functions;
+    public static FunctionTranslator fu;
 
 
     @XmlElement(name = "function")
@@ -28,7 +29,7 @@ public class FunctionTranslator {
         this.functions.add(function);
     }
 
-    static FunctionTranslator readFunctionFile(String folder){
+    public static FunctionTranslator readFunctionFile(String folder){
 
         try {
 
@@ -36,15 +37,13 @@ public class FunctionTranslator {
             JAXBContext jaxbContext = JAXBContext.newInstance(FunctionTranslator.class);
 
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-            FunctionTranslator fun = (FunctionTranslator) jaxbUnmarshaller.unmarshal(file);
-            System.out.println(fun);
+            fu = (FunctionTranslator) jaxbUnmarshaller.unmarshal(file);
 
-            return fun;
+
 
         } catch (JAXBException e) {
             e.printStackTrace();
         }
-
         return null;
     }
 
@@ -76,7 +75,7 @@ public class FunctionTranslator {
         // functions with the same name, but with a different number of parameters.
         // Making this function work is complex, therefore a more easy approach is chosen for now
         // that only replaces function names.
-        
+
         List<List<String>> functionArguments = new ArrayList<>();
         List<String> argsId = Arrays.asList("a","b","c",",d","e","f"); // finite number, no functions with more than 4 arguments
         List<String> functionArgument;
