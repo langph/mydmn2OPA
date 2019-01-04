@@ -1,52 +1,55 @@
 <functions>
     <function>
-        <feel>contains([a],[b])</feel>
-        <opa>Contains([a],[b])</opa>
-        <arg>2</arg>
+        <feel>contains\((".*"),(".*")\)</feel>
+        <opa>Contains($1;$2)</opa>
     </function>
     <function>
-        <feel>lower case([a])</feel>
-        <opa>Lower([a])</opa>
-        <arg>1</arg>
+        <feel>lower case\((".*")\)</feel>
+        <opa>Lower($1)</opa>
     </function>
     <function>
-        <feel>upper case([a])</feel>
-        <opa>Upper([a])</opa>
-        <arg>1</arg>
+        <feel>upper case\((".*")\)</feel>
+        <opa>Upper($1)</opa>
     </function>
     <function>
-        <feel>starts with([a],[b])</feel>
-        <opa>StartsWith([a],[b])</opa>
-        <arg>2</arg>
+        <feel>starts with\((".*"),(".*")\)</feel>
+        <opa>StartsWith($1;$2)</opa>
     </function>
     <function>
-        <feel>ends with([a],[b])</feel>
-        <opa>EndsWith([a],[b])</opa>
-        <arg>2</arg>
+        <feel>ends with\((".*"),(".*")\)</feel>
+        <opa>EndsWith($1;$2)</opa>
     </function>
     <function>
-        <feel>string([a])</feel>
-        <opa>Text([a])</opa>
-        <arg>1</arg>
+        <feel>string\((".*")\)</feel>
+        <opa>Text($1)</opa>
     </function>
     <function>
-        <feel>string length([a])</feel>
-        <opa>Length([a])</opa>
-        <arg>1</arg>
+        <feel>string length\((".*")\)</feel>
+        <opa>Length($1)</opa>
     </function>
     <function>
-        <feel>substring([a],[b],[c])</feel>
-        <opa>Substring([a],[b],[c])</opa>
-        <arg>3</arg>
+        <feel>substring\((".*"),(\d*),(\d*)\)</feel>
+        <opa>Substring($1;$2;$3)</opa>
     </function>
     <function>
-        <feel>date([a])</feel>
-        <opa>Date([a])</opa>
-        <arg>1</arg>
+        <feel>date\(("[12]\d{3}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])")\)</feel>
+        <opa>Date($1)</opa>
     </function>
-   <function>
-       <feel>date([a],[b],[c])</feel>
-       <opa>Date([a],[b],[c])</opa>
-       <arg>3</arg>
-   </function>
+    <function>
+        <feel>date\(([12]\d{3}),(\d{2}),(\d{2})\)</feel>
+        <opa>Date($1;$2;$3)</opa>
+    </function>
+    <function>
+        <feel>([12]\d{3}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\s?([+-])\s?[P](\d\d?)[D]</feel>
+        <opa>AddDays($1;$2)</opa>
+    </function>
+    <function>
+        <feel>([12]\d{3}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\s?([+-])\s?[P](\d\d?)[M]</feel>
+        <opa>AddMonths($1;$2)</opa>
+    </function>
+    <function>
+        <feel>([12]\d{3}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\s?([+-])\s?[P](\d\d?)[Y]</feel>
+        <opa>AddYears($1;$2)</opa>
+    </function>
 </functions>
+

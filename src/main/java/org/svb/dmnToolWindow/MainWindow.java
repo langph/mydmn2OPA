@@ -62,9 +62,10 @@ public class MainWindow extends JPanel implements ActionListener {
             File opaExcelfile = new File(SelectedDir + "/" + DMNfile.getName() + ".xlsx");
             File xmlFile = DMNfile;
 
-            FunctionTranslator.readFunctionFile(SelectedDir);
+            FunctionTranslator ft = new FunctionTranslator();
+            ft.createFunctionInstances();
 
-            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile);
+            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
             result.setVisible(true);
         }
     }

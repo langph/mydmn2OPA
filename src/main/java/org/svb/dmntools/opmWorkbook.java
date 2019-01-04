@@ -31,36 +31,14 @@ public class opmWorkbook {
     private int row; // the current row number
     private List<TInputClause> intervalHeaders = new ArrayList<TInputClause>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
     private int condRows; //number of condition rows
+    private FunctionTranslator ft;
 
 
 
-    static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
-
-        StylesTable stylestable = workbook.getStylesSource();
-        CTStylesheet ctstylesheet = stylestable.getCTStylesheet();
-        CTCellStyles ctcellstyles = ctstylesheet.getCellStyles();
-
-
-        if (ctcellstyles != null) {
-            int i = 0;
-            XSSFCellStyle style = null;
-            while((style = stylestable.getStyleAt(i++)) != null) {
-                CTXf ctxfcore = style.getCoreXf();
-                long xfid = ctxfcore.getXfId();
-                for (CTCellStyle ctcellstyle : ctcellstyles.getCellStyleList()) {
-                    if (ctcellstyle.getXfId() == xfid && name.equals(ctcellstyle.getName())) {
-                        return style;
-                    }
-                }
-            }
-        }
-        return workbook.getCellStyleAt(0); //if nothing found return default cell style
-    }
-
-    public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile){
+    public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile, FunctionTranslator ft){
 
         opmWorkbook work = new opmWorkbook();
-
+        work.ft = ft;
 
         try {
 
@@ -123,6 +101,29 @@ public class opmWorkbook {
         this.OPM_CONDITION_STYLE = getNamedCellStyle(this.workbook, "OPM - Condition");
         this.OPM_ELSE_STYLE = getNamedCellStyle(this.workbook, "OPM - Else");
         this.OPM_COMMENTARY_STYLE = getNamedCellStyle(this.workbook, "OPM - Commentary");
+    }
+
+    static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
+
+        StylesTable stylestable = workbook.getStylesSource();
+        CTStylesheet ctstylesheet = stylestable.getCTStylesheet();
+        CTCellStyles ctcellstyles = ctstylesheet.getCellStyles();
+
+
+        if (ctcellstyles != null) {
+            int i = 0;
+            XSSFCellStyle style = null;
+            while((style = stylestable.getStyleAt(i++)) != null) {
+                CTXf ctxfcore = style.getCoreXf();
+                long xfid = ctxfcore.getXfId();
+                for (CTCellStyle ctcellstyle : ctcellstyles.getCellStyleList()) {
+                    if (ctcellstyle.getXfId() == xfid && name.equals(ctcellstyle.getName())) {
+                        return style;
+                    }
+                }
+            }
+        }
+        return workbook.getCellStyleAt(0); //if nothing found return default cell style
     }
 
     private void createCommentaryID(TDecisionTable dectable, XSSFSheet sheet) {
@@ -240,9 +241,9 @@ public class opmWorkbook {
                         condCell.setCellValue(leftInterval+leftPart);
                         rightPart = t.getText().substring(dashIndex+2,t.getText().length()-1);
                         condCellRightPart.setCellValue(rightInterval+rightPart);
-                    } else {condCell.setCellValue(FunctionTranslator.fu.transformFunctions(t.getText())); }
+                    } else {condCell.setCellValue(ft.transformFunctions(t.getText())); }
                 }
-            } else { condCell.setCellValue(FunctionTranslator.fu.transformFunctions(t.getText()));}
+            } else { condCell.setCellValue(ft.transformFunctions(t.getText()));}
         }
     }
 
@@ -255,7 +256,7 @@ public class opmWorkbook {
         for (TLiteralExpression l : llist) {
             conclCell = this.tableRow.createCell(rowcell++);
             conclCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            conclCell.setCellValue(l.getText());
+            conclCell.setCellValue(ft.transformFunctions(l.getText()));
         }
     }
 
