@@ -18,7 +18,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Unmarshaller;
 
-public class opmWorkbook {
+public class opmWorkbookDmn11 {
 
     private XSSFWorkbook workbook;
     private XSSFRow tableRow; // the current row
@@ -37,7 +37,7 @@ public class opmWorkbook {
 
     public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile, FunctionTranslator ft){
 
-        opmWorkbook work = new opmWorkbook();
+        opmWorkbookDmn11 work = new opmWorkbookDmn11();
         work.ft = ft;
 
         try {

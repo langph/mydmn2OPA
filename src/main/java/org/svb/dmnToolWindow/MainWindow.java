@@ -2,7 +2,7 @@ package org.svb.dmnToolWindow;
 
 
 import org.svb.dmntools.FunctionTranslator;
-import org.svb.dmntools.opmWorkbook;
+import org.svb.dmntools.*;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.*;
@@ -17,6 +17,10 @@ public class MainWindow extends JPanel implements ActionListener {
     JLabel result;
     JLabel path;
     JTextField pathToDocumentsFolder;
+    ButtonGroup group;
+    JRadioButton dmn11;
+    JRadioButton dmn12;
+
 
 
     public MainWindow() {
@@ -32,8 +36,17 @@ public class MainWindow extends JPanel implements ActionListener {
         setLayout(new SpringLayout());
         add(path);
         add(pathToDocumentsFolder);
+        dmn11 = new JRadioButton("DMN 1.1");
+        dmn12 = new JRadioButton("DMN 1.2");
+        dmn12.setSelected(true);
+        group = new ButtonGroup();
+        group.add(dmn11);
+        group.add(dmn12);
+        add(dmn11);
+        add(dmn12);
         add(selectDMNFile);
         add(result);
+
         result.setVisible(false);
 
     }
@@ -65,13 +78,17 @@ public class MainWindow extends JPanel implements ActionListener {
             FunctionTranslator ft = new FunctionTranslator();
             ft.createFunctionInstances();
 
-            opmWorkbook.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
+            if (dmn11.isSelected()) {
+                opmWorkbookDmn11.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
+            } else {
+                opmWorkbookDmn12.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
+            }
             result.setVisible(true);
         }
     }
 
     public Dimension getPreferredSize(){
-            return new Dimension(200, 200);
+            return new Dimension(200, 300);
         }
 }
 

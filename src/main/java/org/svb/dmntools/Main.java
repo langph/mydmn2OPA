@@ -50,11 +50,11 @@ class DMNToOPA {
         panel.setLayout(new SpringLayout());
 
         SpringUtilities.makeCompactGrid(panel,
-                2, 2,  //rows, cols
+                3, 2,  //rows, cols
                 6, 6,  //initX, initY
                 6, 6); //xPad, yPad
         frame.setSize(panel.getPreferredSize());
-        frame.setSize(400, 130);
+        frame.setSize(400, 150);
         frame.setLocation(150, 100);
         frame.getContentPane().add(panel,"Center");
         frame.setVisible(true);
