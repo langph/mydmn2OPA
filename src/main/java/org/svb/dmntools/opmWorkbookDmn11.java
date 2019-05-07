@@ -18,6 +18,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Unmarshaller;
 
+
 public class opmWorkbookDmn11 {
 
     private XSSFWorkbook workbook;
@@ -242,7 +243,7 @@ public class opmWorkbookDmn11 {
                         rightPart = t.getText().substring(dashIndex+2,t.getText().length()-1);
                         condCellRightPart.setCellValue(rightInterval+rightPart);
                     } else {condCell.setCellValue(ft.transformFunctions(t.getText())); }
-                }
+                } else {condCell.setCellValue(ft.transformFunctions(t.getText())); }
             } else { condCell.setCellValue(ft.transformFunctions(t.getText()));}
         }
     }
