@@ -35,7 +35,7 @@ public class opmWorkbookDmn12 {
     private List<TInputClause> intervalHeaders = new ArrayList<>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
     private int conditionRows; //number of condition rows
     private FunctionTranslator ft;
-    private List<String> enumerationIDs;
+    private List<TInputClause> enumerationColumns = new ArrayList<>();
 
 
 
@@ -73,6 +73,8 @@ public class opmWorkbookDmn12 {
                     this.createOpmSheet( (TDecision) i.getValue());
                 }
             }
+            // remove templates
+            this.removeTemplates();
             // write to new file
             FileOutputStream fos = new FileOutputStream(fileNameOut);
             this.workbook.write(fos);
@@ -87,8 +89,6 @@ public class opmWorkbookDmn12 {
 
         JAXBElement<? extends TExpression> expr = dec.getExpression();
 
-        this.enumerationIDs = new ArrayList<>();
-
         if (expr.getValue().getClass() == TDecisionTable.class) {
             TDecisionTable dectable = (TDecisionTable) expr.getValue();
             XSSFSheet sheet = this.workbook.createSheet(dec.getName());
@@ -100,6 +100,23 @@ public class opmWorkbookDmn12 {
         }
     }
 
+    private void removeTemplates(){
+
+        int index;
+        XSSFSheet sheet;
+
+        sheet = this.workbook.getSheet("Regeltabel");
+        if(sheet != null)   {
+            index = workbook.getSheetIndex(sheet);
+            workbook.removeSheetAt(index);
+        }
+
+        sheet = this.workbook.getSheet("Declaraties");
+        if(sheet != null)   {
+            index = workbook.getSheetIndex(sheet);
+            workbook.removeSheetAt(index);
+        }
+    }
     private void getOpaStyles(){
 
         this.OPM_CONCLUSION_HEADING_STYLE = getNamedCellStyle(this.workbook, "OPM - Conclusion Heading");
@@ -187,11 +204,11 @@ public class opmWorkbookDmn12 {
 
            if (t != null) {
                if (t.getOtherAttributes().containsValue("enumeration")) {
-                   this.enumerationIDs.add(c.getId());
+                   this.enumerationColumns.add(c);
                }
            }
-            if (intervalHeaders != null) {
-                if (intervalHeaders.contains(c))
+            if (this.intervalHeaders != null) {
+                if (this.intervalHeaders.contains(c))
                 // create extra column for interval
                 {
                     this.conditionRows++;
@@ -216,7 +233,7 @@ public class opmWorkbookDmn12 {
         }
     }
 
-    private void createConditionRow(TDecisionTable d, TDecisionRule r, XSSFSheet s){
+    private void createRow(TDecisionTable d, TDecisionRule r, XSSFSheet s, TUnaryTests enumT, String enumValue){
 
         XSSFCell conditionCell;
         int testIndex;
@@ -224,56 +241,122 @@ public class opmWorkbookDmn12 {
         List<String> intervalSet;
         List<TInputClause> conditionHeaders = d.getInput();
 
+        int rowsToCreate = 1;
+        TUnaryTests enumCell = null;
+        Boolean cellWritten;
+
+        List<String> stringEnumerations = new ArrayList<>();
+        List<String> theOneEnumList = new ArrayList<>(); // hack
+
+            final class enumField {
+            int index;
+            List<String> enumerationValues = new ArrayList<>();
+        }
+
+        List<enumField> efs =new ArrayList<>();
+
         this.tableRow = s.createRow(this.row++);
 
         for (TUnaryTests t : r.getInputEntry()) {
+            cellWritten = false;
             conditionCell = this.tableRow.createCell(rowCell++);
             testIndex = r.getInputEntry().indexOf(t);
-
             if(!this.intervalHeaders.isEmpty()) { //there are intervals
                 if (this.intervalHeaders.contains(conditionHeaders.get(testIndex))){
                     //there are intervals in this column
-
                     if (t.getText().contains("..")) {
-
-                        intervalSet = this.setIntervalCells(t);
+                        intervalSet = this.getIntervalCells(t);
                         // write left part
-                        this.formatConditionCell(conditionCell, intervalSet.get(0));
-                        // create cell, write left part
+                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(0));
+                        // create cell, write right part
                         conditionCell = this.tableRow.createCell(rowCell++);
-                        this.formatConditionCell(conditionCell, intervalSet.get(1));
-
+                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(1));
+                        cellWritten = true;
                     } else {
                         // one with value, one empty
-                        this.formatConditionCell(conditionCell, t.getText());
+                        this.formatAndSetConditionCell(conditionCell, t.getText());
                         conditionCell = this.tableRow.createCell(rowCell++);
-                        this.formatConditionCell(conditionCell, t.getText());
+                        this.formatAndSetConditionCell(conditionCell, "-");
+                        cellWritten = true;
                     }
-                } else { this.formatConditionCell(conditionCell, t.getText()); }
-            } else { this.formatConditionCell(conditionCell, t.getText()); }
+                }
+            }
+            if (!this.enumerationColumns.isEmpty()) {
+                if (this.enumerationColumns.contains(conditionHeaders.get(testIndex))) {
+                    // there are enumerations in this column
+                    // check values: 0 or more
+
+                    if (enumT != null && enumT == t) {
+                        this.formatAndSetConditionCell(conditionCell, enumValue);
+                        cellWritten = true;
+                    } else {
+                        Pattern p = Pattern.compile("(\"[\\w\\s]+\")");
+                        Matcher m = p.matcher(t.getText());
+
+                        if (m.find()) {
+                            enumCell = t;
+                            m.reset();
+                            while (m.find()) {
+                                 stringEnumerations.add(m.group(1));
+                              }
+                            // to get one row with more than one enumvalue in the same column working, this hack is necessary
+
+                            if ( stringEnumerations.size() > 1)
+                             { theOneEnumList.addAll(stringEnumerations);}
+
+                            enumField ef = new enumField();
+                            ef.index = testIndex;
+                            ef.enumerationValues = stringEnumerations;
+                            efs.add(ef);
+
+                    //      no matter what, select first find and put it in the row
+                            this.formatAndSetConditionCell(conditionCell, stringEnumerations.get(0));
+                            stringEnumerations.clear();
+                            cellWritten = true;
+                        }
+                    }
+                }
+            }
+            if (!cellWritten) { this.formatAndSetConditionCell(conditionCell, t.getText());}
+
+            // if last cell is written, then write extra rows if needed
+
+           // System.out.println(r.getInputEntry().indexOf(t));
+           // System.out.println(r.getInputEntry().size());
+            createConclusionCell(r); // conclude last row
+            if (r.getInputEntry().indexOf(t) == r.getInputEntry().size() - 1) { // all elements of the row have been processed
+                // this is not a nice solution, but because of the complexity of this feature, it will have to do for now.
+                rowsToCreate = theOneEnumList.size() - 1;
+                if (rowsToCreate > 0) {
+
+                    for (int i = 1; i <= rowsToCreate ; i++) {
+                            createRow(d, r, s, enumCell, theOneEnumList.get(i));
+                            createConclusionCell(r);
+                    }
+                }
+            }
         }
     }
 
 
-
-    private List<String> setIntervalCells(TUnaryTests t) {
+    private List<String> getIntervalCells(TUnaryTests t) {
 
         List<String> intervals = new ArrayList<>();
 
-        Pattern pattern = Pattern.compile("(\\(|\\[)([0-9]+)\\.\\.([0-9]+)(\\)|])");
-        Matcher matcher = pattern.matcher(t.getText());
+        Pattern p= Pattern.compile("(\\(|\\[)([0-9]+)\\.\\.([0-9]+)(\\)|])");
+        Matcher m = p.matcher(t.getText());
 
-        if (matcher.find()) {
-            if (matcher.group(1).equals("[")) intervals.add(">=" + matcher.group(2));
-            if (matcher.group(1).equals("(")) intervals.add(">" + matcher.group(2));
-            if (matcher.group(4).equals("]")) intervals.add("<=" + matcher.group(3));
-            if (matcher.group(4).equals(")")) intervals.add("<" + matcher.group(3));
+        if (m.find()) {
+            if (m.group(1).equals("[")) intervals.add(">=" + m.group(2));
+            if (m.group(1).equals("(")) intervals.add(">" + m.group(2));
+            if (m.group(4).equals("]")) intervals.add("<=" + m.group(3));
+            if (m.group(4).equals(")")) intervals.add("<" + m.group(3));
         }
 
         return intervals;
     }
 
-    private void formatConditionCell(XSSFCell c,  String s){
+    private void formatAndSetConditionCell(XSSFCell c,  String s){
 
         if( s.length() == 1 && s.indexOf("-") == 0 ){
             c.setCellStyle(this.OPM_CONDITION_STYLE);
@@ -283,7 +366,7 @@ public class opmWorkbookDmn12 {
         }
     }
 
-    private void createConclusionRow(TDecisionRule r){
+    private void createConclusionCell(TDecisionRule r){
 
         XSSFCell conclusionCell;
         int rowCell = this.conditionRows + 1;
@@ -302,9 +385,7 @@ public class opmWorkbookDmn12 {
 
         List<TDecisionRule> decisionRules = d.getRule();
         for (TDecisionRule r : decisionRules) {
-            this.createConditionRow(d,r,s);
-            //this.createConditionRows(d, r, s);
-            this.createConclusionRow(r);
+            this.createRow(d, r, s, null, null);
         }
 
         // Else uncertain

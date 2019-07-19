@@ -20,7 +20,7 @@ public class AboutDialog extends JDialog {
         add(Box.createRigidArea(new Dimension(0, 10)));
         JLabel name = new JLabel("DMN to OPA excel");
         name.setAlignmentX(0.5f);
-        JLabel version = new JLabel("Version: 1.00");
+        JLabel version = new JLabel("Version: 1.30");
         version.setAlignmentX(0.5f);
         JLabel author = new JLabel("By: Philip de Lang");
         author.setAlignmentX(0.5f);
