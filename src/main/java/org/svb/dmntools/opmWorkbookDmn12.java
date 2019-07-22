@@ -59,11 +59,11 @@ public class opmWorkbookDmn12 {
         }
     }
 
-    private void createOpmWorkbook(File fileNametemplate, File fileNameOut, List<JAXBElement <? extends TDRGElement>> jes) throws IOException {
+    private void createOpmWorkbook(File fileNameTemplate, File fileNameOut, List<JAXBElement <? extends TDRGElement>> jes) throws IOException {
 
         try{
             //use template
-            OPCPackage pkg = OPCPackage.open(fileNametemplate);
+            OPCPackage pkg = OPCPackage.open(fileNameTemplate);
             this.workbook = new XSSFWorkbook(pkg);
             // get the styles
             getOpaStyles();
@@ -97,6 +97,221 @@ public class opmWorkbookDmn12 {
             this.createCommentaryID(dectable,sheet);
             this.createTableHeaders(dectable, sheet);
             this.createTableFields(dectable, sheet);
+        }
+    }
+
+    private void getIntervalHeaders(TDecisionTable d){
+
+        // find intervals, they will lead to an extra column in OPA
+        List<TDecisionRule> decisionRules = d.getRule();
+        List<TInputClause> conditionHeaders = d.getInput();
+        int testIndex;
+
+        for (TDecisionRule r : decisionRules) {
+            for (TUnaryTests t : r.getInputEntry()) {
+                if (t.getText().contains("..")) {
+                    testIndex = r.getInputEntry().indexOf(t);
+                    if (!this.intervalHeaders.contains(conditionHeaders.get(testIndex))){
+                        this.intervalHeaders.add(conditionHeaders.get(testIndex));
+                    }
+                }
+            }
+        }
+    }
+
+    private void createCommentaryID(TDecisionTable d, XSSFSheet s) {
+
+        int rowCell = 1;
+        XSSFCell commentCell;
+
+        this.tableRow = s.createRow(this.row++);
+        commentCell = this.tableRow.createCell(rowCell);
+        commentCell.setCellStyle(this.OPM_COMMENTARY_STYLE);
+        commentCell.setCellValue(d.getId());
+
+    }
+
+    private void createTableHeaders(TDecisionTable d, XSSFSheet s){
+
+        List<TInputClause> conditionHeaders;
+        List<TOutputClause> conclusionHeaders;
+        conditionHeaders = d.getInput();
+        conclusionHeaders = d.getOutput();
+        XSSFCell conditionHeaderCell;
+        XSSFCell conclusionHeaderCell;
+        CellRangeAddress headerRegion;
+
+        int rowCell = 1; // start from B = 1;
+        this.conditionRows = conditionHeaders.size();
+        // createHeaders
+        this.tableRow = s.createRow(this.row++);
+        for (TInputClause c : conditionHeaders) {
+            conditionHeaderCell = this.tableRow.createCell(rowCell++);
+            conditionHeaderCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
+            conditionHeaderCell.setCellValue(c.getInputExpression().getText());
+
+            TUnaryTests t = c.getInputValues();
+
+            if (t != null) {
+                if (t.getOtherAttributes().containsValue("enumeration")) {
+                    this.enumerationColumns.add(c);
+                }
+            }
+            if (this.intervalHeaders != null) {
+                if (this.intervalHeaders.contains(c))
+                // create extra column for interval
+                {
+                    this.conditionRows++;
+                    conditionHeaderCell = this.tableRow.createCell(rowCell++);
+                    conditionHeaderCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
+                    headerRegion = new CellRangeAddress(2, 2, rowCell - 2, rowCell - 1);
+                    s.addMergedRegion(headerRegion);
+                }
+            }
+        }
+        if (conclusionHeaders.size() == 1) {
+            conclusionHeaderCell = this.tableRow.createCell(rowCell);
+            conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
+            conclusionHeaderCell.setCellValue(d.getOutputLabel());
+        }
+        if (conclusionHeaders.size() > 1) {
+            for (TOutputClause o : conclusionHeaders){
+                conclusionHeaderCell = this.tableRow.createCell(rowCell++);
+                conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
+                conclusionHeaderCell.setCellValue(o.getName());
+            }
+        }
+    }
+
+    private void createTableFields(TDecisionTable d, XSSFSheet s){
+
+        int rowCell = this.conditionRows + 1;
+
+        List<TDecisionRule> decisionRules = d.getRule();
+        for (TDecisionRule r : decisionRules) {
+            this.createRow(d, r, s, null, null);
+        }
+
+        // Else uncertain
+        List<TOutputClause> conclusionHeaders;
+        conclusionHeaders = d.getOutput();
+        this.tableRow = s.createRow(this.row++);
+        XSSFCell c;
+        // conclusion else
+        for (TOutputClause ignored : conclusionHeaders) {
+            c = this.tableRow.createCell(rowCell++);
+            c.setCellStyle(this.OPM_CONCLUSION_STYLE);
+            c.setCellValue("uncertain");
+        }
+        XSSFCell elseCell = this.tableRow.createCell(this.conditionRows);
+        elseCell.setCellStyle(this.OPM_ELSE_STYLE);
+        elseCell.setCellValue("else");
+    }
+
+    private void createRow(TDecisionTable d, TDecisionRule r, XSSFSheet s, TUnaryTests enumT, String enumValue){
+
+        XSSFCell conditionCell;
+        int testIndex;
+        int rowCell = 1;
+        List<String> intervalSet;
+        List<TInputClause> conditionHeaders = d.getInput();
+
+        int rowsToCreate;
+        TUnaryTests enumCell = null;
+
+
+        List<String> stringEnumerations = new ArrayList<>();
+        List<String> theOneEnumList = new ArrayList<>(); // hack
+
+        final class enumField {
+            private int index;
+            private List<String> enumerationValues = new ArrayList<>();
+        }
+
+        List<enumField> efs =new ArrayList<>();
+
+        this.tableRow = s.createRow(this.row++);
+
+        for (TUnaryTests t : r.getInputEntry()) {
+            conditionCell = this.tableRow.createCell(rowCell++);
+            testIndex = r.getInputEntry().indexOf(t);
+
+            switch (this.getAction(conditionHeaders,testIndex)){
+
+                case "interval":
+                    if (t.getText().contains("..")) {
+                        intervalSet = this.getIntervalCells(t);
+                        // write left part
+                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(0));
+                        // create cell, write right part
+                        conditionCell = this.tableRow.createCell(rowCell++);
+                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(1));
+                    } else {
+                        // one with value, one empty
+                        this.formatAndSetConditionCell(conditionCell, t.getText());
+                        conditionCell = this.tableRow.createCell(rowCell++);
+                        this.formatAndSetConditionCell(conditionCell, "-");
+                    }
+                    break;
+
+                case "enumeration":
+                    if (enumT != null && enumT == t) {
+                        this.formatAndSetConditionCell(conditionCell, enumValue);
+                    } else {
+                        Pattern p = Pattern.compile("(\"[\\w\\s]+\")");
+                        Matcher m = p.matcher(t.getText());
+
+                        if (m.find()) {
+                            enumCell = t;
+                            m.reset();
+                            while (m.find()) {
+                                stringEnumerations.add(m.group(1));
+                            }
+                            // to get one row with more than one enumvalue in the same column working, this hack is necessary
+
+                            if ( stringEnumerations.size() > 1)
+                            { theOneEnumList.addAll(stringEnumerations);}
+
+                            enumField ef = new enumField();
+                            ef.index = testIndex;
+                            ef.enumerationValues = stringEnumerations;
+                            efs.add(ef);
+
+                            //      no matter what, select first find and put it in the row
+                            this.formatAndSetConditionCell(conditionCell, stringEnumerations.get(0));
+                            stringEnumerations.clear();
+                        } else {  this.formatAndSetConditionCell(conditionCell, "-"); }
+                    }
+                    break;
+                case "normal":
+                    this.formatAndSetConditionCell(conditionCell, t.getText());
+            }
+            // if last cell is written, then write extra rows if needed
+            createConclusionCell(r); // conclude last row
+            if (r.getInputEntry().indexOf(t) == r.getInputEntry().size() - 1) { // all elements of the row have been processed
+                // this is not a nice solution, but because of the complexity of this feature, it will have to do for now.
+                rowsToCreate = theOneEnumList.size() - 1;
+                if (rowsToCreate > 0) {
+
+                    for (int i = 1; i <= rowsToCreate ; i++) {
+                        createRow(d, r, s, enumCell, theOneEnumList.get(i));
+                        createConclusionCell(r);
+                    }
+                }
+            }
+        }
+    }
+
+    private void createConclusionCell(TDecisionRule r){
+
+        XSSFCell conclusionCell;
+        int rowCell = this.conditionRows + 1;
+        // 1 or more conclusion rows
+        List<TLiteralExpression> expressionList = r.getOutputEntry();
+        for (TLiteralExpression l : expressionList) {
+            conclusionCell = this.tableRow.createCell(rowCell++);
+            conclusionCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
+            conclusionCell.setCellValue(ft.transformFunctions(l.getText()));
         }
     }
 
@@ -150,194 +365,19 @@ public class opmWorkbookDmn12 {
         return workbook.getCellStyleAt(0); //if nothing found return default cell style
     }
 
-    private void createCommentaryID(TDecisionTable d, XSSFSheet s) {
+    private String getAction(List<TInputClause> ch, int t){
 
-        int rowCell = 1;
-        XSSFCell commentCell;
 
-        this.tableRow = s.createRow(this.row++);
-        commentCell = this.tableRow.createCell(rowCell);
-        commentCell.setCellStyle(this.OPM_COMMENTARY_STYLE);
-        commentCell.setCellValue(d.getId());
+        if(!this.intervalHeaders.isEmpty() && this.intervalHeaders.contains(ch.get(t))){
+            return "interval";
+        }
 
+        if (!this.enumerationColumns.isEmpty()&& this.enumerationColumns.contains(ch.get(t))) {
+            return "enumeration";
+        }
+
+        return "normal";
     }
-
-    private void getIntervalHeaders(TDecisionTable d){
-
-        // find intervals, they will lead to an extra column in OPA
-        List<TDecisionRule> decisionRules = d.getRule();
-        List<TInputClause> conditionHeaders = d.getInput();
-        int testIndex;
-
-        for (TDecisionRule r : decisionRules) {
-            for (TUnaryTests t : r.getInputEntry()) {
-                if (t.getText().contains("..")) {
-                    testIndex = r.getInputEntry().indexOf(t);
-                    if (!this.intervalHeaders.contains(conditionHeaders.get(testIndex))){
-                        this.intervalHeaders.add(conditionHeaders.get(testIndex));
-                    }
-                }
-            }
-        }
-    }
-
-    private void createTableHeaders(TDecisionTable d, XSSFSheet s){
-
-        List<TInputClause> conditionHeaders;
-        List<TOutputClause> conclusionHeaders;
-        conditionHeaders = d.getInput();
-        conclusionHeaders = d.getOutput();
-        XSSFCell conditionHeaderCell;
-        XSSFCell conclusionHeaderCell;
-        CellRangeAddress headerRegion;
-
-        int rowCell = 1; // start from B = 1;
-        this.conditionRows = conditionHeaders.size();
-        // createHeaders
-        this.tableRow = s.createRow(this.row++);
-        for (TInputClause c : conditionHeaders) {
-            conditionHeaderCell = this.tableRow.createCell(rowCell++);
-            conditionHeaderCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
-            conditionHeaderCell.setCellValue(c.getInputExpression().getText());
-
-           TUnaryTests t = c.getInputValues();
-
-           if (t != null) {
-               if (t.getOtherAttributes().containsValue("enumeration")) {
-                   this.enumerationColumns.add(c);
-               }
-           }
-            if (this.intervalHeaders != null) {
-                if (this.intervalHeaders.contains(c))
-                // create extra column for interval
-                {
-                    this.conditionRows++;
-                    conditionHeaderCell = this.tableRow.createCell(rowCell++);
-                    conditionHeaderCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
-                    headerRegion = new CellRangeAddress(2, 2, rowCell - 2, rowCell - 1);
-                    s.addMergedRegion(headerRegion);
-                }
-            }
-        }
-        if (conclusionHeaders.size() == 1) {
-            conclusionHeaderCell = this.tableRow.createCell(rowCell);
-            conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
-            conclusionHeaderCell.setCellValue(d.getOutputLabel());
-        }
-        if (conclusionHeaders.size() > 1) {
-            for (TOutputClause o : conclusionHeaders){
-                conclusionHeaderCell = this.tableRow.createCell(rowCell++);
-                conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
-                conclusionHeaderCell.setCellValue(o.getName());
-            }
-        }
-    }
-
-    private void createRow(TDecisionTable d, TDecisionRule r, XSSFSheet s, TUnaryTests enumT, String enumValue){
-
-        XSSFCell conditionCell;
-        int testIndex;
-        int rowCell = 1;
-        List<String> intervalSet;
-        List<TInputClause> conditionHeaders = d.getInput();
-
-        int rowsToCreate = 1;
-        TUnaryTests enumCell = null;
-        Boolean cellWritten;
-
-        List<String> stringEnumerations = new ArrayList<>();
-        List<String> theOneEnumList = new ArrayList<>(); // hack
-
-            final class enumField {
-            int index;
-            List<String> enumerationValues = new ArrayList<>();
-        }
-
-        List<enumField> efs =new ArrayList<>();
-
-        this.tableRow = s.createRow(this.row++);
-
-        for (TUnaryTests t : r.getInputEntry()) {
-            cellWritten = false;
-            conditionCell = this.tableRow.createCell(rowCell++);
-            testIndex = r.getInputEntry().indexOf(t);
-            if(!this.intervalHeaders.isEmpty()) { //there are intervals
-                if (this.intervalHeaders.contains(conditionHeaders.get(testIndex))){
-                    //there are intervals in this column
-                    if (t.getText().contains("..")) {
-                        intervalSet = this.getIntervalCells(t);
-                        // write left part
-                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(0));
-                        // create cell, write right part
-                        conditionCell = this.tableRow.createCell(rowCell++);
-                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(1));
-                        cellWritten = true;
-                    } else {
-                        // one with value, one empty
-                        this.formatAndSetConditionCell(conditionCell, t.getText());
-                        conditionCell = this.tableRow.createCell(rowCell++);
-                        this.formatAndSetConditionCell(conditionCell, "-");
-                        cellWritten = true;
-                    }
-                }
-            }
-            if (!this.enumerationColumns.isEmpty()) {
-                if (this.enumerationColumns.contains(conditionHeaders.get(testIndex))) {
-                    // there are enumerations in this column
-                    // check values: 0 or more
-
-                    if (enumT != null && enumT == t) {
-                        this.formatAndSetConditionCell(conditionCell, enumValue);
-                        cellWritten = true;
-                    } else {
-                        Pattern p = Pattern.compile("(\"[\\w\\s]+\")");
-                        Matcher m = p.matcher(t.getText());
-
-                        if (m.find()) {
-                            enumCell = t;
-                            m.reset();
-                            while (m.find()) {
-                                 stringEnumerations.add(m.group(1));
-                              }
-                            // to get one row with more than one enumvalue in the same column working, this hack is necessary
-
-                            if ( stringEnumerations.size() > 1)
-                             { theOneEnumList.addAll(stringEnumerations);}
-
-                            enumField ef = new enumField();
-                            ef.index = testIndex;
-                            ef.enumerationValues = stringEnumerations;
-                            efs.add(ef);
-
-                    //      no matter what, select first find and put it in the row
-                            this.formatAndSetConditionCell(conditionCell, stringEnumerations.get(0));
-                            stringEnumerations.clear();
-                            cellWritten = true;
-                        }
-                    }
-                }
-            }
-            if (!cellWritten) { this.formatAndSetConditionCell(conditionCell, t.getText());}
-
-            // if last cell is written, then write extra rows if needed
-
-           // System.out.println(r.getInputEntry().indexOf(t));
-           // System.out.println(r.getInputEntry().size());
-            createConclusionCell(r); // conclude last row
-            if (r.getInputEntry().indexOf(t) == r.getInputEntry().size() - 1) { // all elements of the row have been processed
-                // this is not a nice solution, but because of the complexity of this feature, it will have to do for now.
-                rowsToCreate = theOneEnumList.size() - 1;
-                if (rowsToCreate > 0) {
-
-                    for (int i = 1; i <= rowsToCreate ; i++) {
-                            createRow(d, r, s, enumCell, theOneEnumList.get(i));
-                            createConclusionCell(r);
-                    }
-                }
-            }
-        }
-    }
-
 
     private List<String> getIntervalCells(TUnaryTests t) {
 
@@ -364,43 +404,5 @@ public class opmWorkbookDmn12 {
             c.setCellValue(ft.transformFunctions(s));
             c.setCellStyle(this.OPM_CONDITION_STYLE);
         }
-    }
-
-    private void createConclusionCell(TDecisionRule r){
-
-        XSSFCell conclusionCell;
-        int rowCell = this.conditionRows + 1;
-        // 1 or more conclusion rows
-        List<TLiteralExpression> expressionList = r.getOutputEntry();
-        for (TLiteralExpression l : expressionList) {
-            conclusionCell = this.tableRow.createCell(rowCell++);
-            conclusionCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            conclusionCell.setCellValue(ft.transformFunctions(l.getText()));
-        }
-    }
-
-    private void createTableFields(TDecisionTable d, XSSFSheet s){
-
-        int rowCell = this.conditionRows + 1;
-
-        List<TDecisionRule> decisionRules = d.getRule();
-        for (TDecisionRule r : decisionRules) {
-            this.createRow(d, r, s, null, null);
-        }
-
-        // Else uncertain
-        List<TOutputClause> conclusionHeaders;
-        conclusionHeaders = d.getOutput();
-        this.tableRow = s.createRow(this.row++);
-        XSSFCell c;
-        // conclusion else
-        for (TOutputClause ignored : conclusionHeaders) {
-            c = this.tableRow.createCell(rowCell++);
-            c.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            c.setCellValue("uncertain");
-        }
-        XSSFCell elseCell = this.tableRow.createCell(this.conditionRows);
-        elseCell.setCellStyle(this.OPM_ELSE_STYLE);
-        elseCell.setCellValue("else");
     }
 }

@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.model.StylesTable;
@@ -18,7 +21,6 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Unmarshaller;
 
-
 public class opmWorkbookDmn11 {
 
     private XSSFWorkbook workbook;
@@ -30,9 +32,10 @@ public class opmWorkbookDmn11 {
     private XSSFCellStyle OPM_ELSE_STYLE;
     private XSSFCellStyle OPM_COMMENTARY_STYLE;
     private int row; // the current row number
-    private List<TInputClause> intervalHeaders = new ArrayList<TInputClause>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
-    private int condRows; //number of condition rows
+    private List<TInputClause> intervalHeaders = new ArrayList<>(); // headers from conditions with intervals -> i.e. [19..25] or (19..25]
+    private int conditionRows; //number of condition rows
     private FunctionTranslator ft;
+    private List<TInputClause> enumerationColumns = new ArrayList<>();
 
 
 
@@ -43,7 +46,7 @@ public class opmWorkbookDmn11 {
 
         try {
 
-            JAXBContext jc = JAXBContext.newInstance("org.svb.dmn11");
+            JAXBContext jc = JAXBContext.newInstance("org.svb.dmn12");
             Unmarshaller u = jc.createUnmarshaller();
             JAXBElement je = (JAXBElement) u.unmarshal(xmlFile);
             TDefinitions dmndef = (TDefinitions) je.getValue();
@@ -56,11 +59,11 @@ public class opmWorkbookDmn11 {
         }
     }
 
-    public void createOpmWorkbook(File fileNametemplate, File fileNameOut, List<JAXBElement <? extends TDRGElement>> jes) throws IOException {
+    private void createOpmWorkbook(File fileNameTemplate, File fileNameOut, List<JAXBElement <? extends TDRGElement>> jes) throws IOException {
 
         try{
             //use template
-            OPCPackage pkg = OPCPackage.open(fileNametemplate);
+            OPCPackage pkg = OPCPackage.open(fileNameTemplate);
             this.workbook = new XSSFWorkbook(pkg);
             // get the styles
             getOpaStyles();
@@ -70,6 +73,8 @@ public class opmWorkbookDmn11 {
                     this.createOpmSheet( (TDecision) i.getValue());
                 }
             }
+            // remove templates
+            this.removeTemplates();
             // write to new file
             FileOutputStream fos = new FileOutputStream(fileNameOut);
             this.workbook.write(fos);
@@ -83,6 +88,7 @@ public class opmWorkbookDmn11 {
     private void createOpmSheet(TDecision dec){
 
         JAXBElement<? extends TExpression> expr = dec.getExpression();
+
         if (expr.getValue().getClass() == TDecisionTable.class) {
             TDecisionTable dectable = (TDecisionTable) expr.getValue();
             XSSFSheet sheet = this.workbook.createSheet(dec.getName());
@@ -94,6 +100,237 @@ public class opmWorkbookDmn11 {
         }
     }
 
+    private void getIntervalHeaders(TDecisionTable d){
+
+        // find intervals, they will lead to an extra column in OPA
+        List<TDecisionRule> decisionRules = d.getRule();
+        List<TInputClause> conditionHeaders = d.getInput();
+        int testIndex;
+
+        for (TDecisionRule r : decisionRules) {
+            for (TUnaryTests t : r.getInputEntry()) {
+                if (t.getText().contains("..")) {
+                    testIndex = r.getInputEntry().indexOf(t);
+                    if (!this.intervalHeaders.contains(conditionHeaders.get(testIndex))){
+                        this.intervalHeaders.add(conditionHeaders.get(testIndex));
+                    }
+                }
+            }
+        }
+    }
+
+    private void createCommentaryID(TDecisionTable d, XSSFSheet s) {
+
+        int rowCell = 1;
+        XSSFCell commentCell;
+
+        this.tableRow = s.createRow(this.row++);
+        commentCell = this.tableRow.createCell(rowCell);
+        commentCell.setCellStyle(this.OPM_COMMENTARY_STYLE);
+        commentCell.setCellValue(d.getId());
+
+    }
+
+    private void createTableHeaders(TDecisionTable d, XSSFSheet s){
+
+        List<TInputClause> conditionHeaders;
+        List<TOutputClause> conclusionHeaders;
+        conditionHeaders = d.getInput();
+        conclusionHeaders = d.getOutput();
+        XSSFCell conditionHeaderCell;
+        XSSFCell conclusionHeaderCell;
+        CellRangeAddress headerRegion;
+
+        int rowCell = 1; // start from B = 1;
+        this.conditionRows = conditionHeaders.size();
+        // createHeaders
+        this.tableRow = s.createRow(this.row++);
+        for (TInputClause c : conditionHeaders) {
+            conditionHeaderCell = this.tableRow.createCell(rowCell++);
+            conditionHeaderCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
+            conditionHeaderCell.setCellValue(c.getInputExpression().getText());
+
+            TUnaryTests t = c.getInputValues();
+
+            if (t != null) {
+                if (t.getOtherAttributes().containsValue("enumeration")) {
+                    this.enumerationColumns.add(c);
+                }
+            }
+            if (this.intervalHeaders != null) {
+                if (this.intervalHeaders.contains(c))
+                // create extra column for interval
+                {
+                    this.conditionRows++;
+                    conditionHeaderCell = this.tableRow.createCell(rowCell++);
+                    conditionHeaderCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
+                    headerRegion = new CellRangeAddress(2, 2, rowCell - 2, rowCell - 1);
+                    s.addMergedRegion(headerRegion);
+                }
+            }
+        }
+        if (conclusionHeaders.size() == 1) {
+            conclusionHeaderCell = this.tableRow.createCell(rowCell);
+            conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
+            conclusionHeaderCell.setCellValue(d.getOutputLabel());
+        }
+        if (conclusionHeaders.size() > 1) {
+            for (TOutputClause o : conclusionHeaders){
+                conclusionHeaderCell = this.tableRow.createCell(rowCell++);
+                conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
+                conclusionHeaderCell.setCellValue(o.getName());
+            }
+        }
+    }
+
+    private void createTableFields(TDecisionTable d, XSSFSheet s){
+
+        int rowCell = this.conditionRows + 1;
+
+        List<TDecisionRule> decisionRules = d.getRule();
+        for (TDecisionRule r : decisionRules) {
+            this.createRow(d, r, s, null, null);
+        }
+
+        // Else uncertain
+        List<TOutputClause> conclusionHeaders;
+        conclusionHeaders = d.getOutput();
+        this.tableRow = s.createRow(this.row++);
+        XSSFCell c;
+        // conclusion else
+        for (TOutputClause ignored : conclusionHeaders) {
+            c = this.tableRow.createCell(rowCell++);
+            c.setCellStyle(this.OPM_CONCLUSION_STYLE);
+            c.setCellValue("uncertain");
+        }
+        XSSFCell elseCell = this.tableRow.createCell(this.conditionRows);
+        elseCell.setCellStyle(this.OPM_ELSE_STYLE);
+        elseCell.setCellValue("else");
+    }
+
+    private void createRow(TDecisionTable d, TDecisionRule r, XSSFSheet s, TUnaryTests enumT, String enumValue){
+
+        XSSFCell conditionCell;
+        int testIndex;
+        int rowCell = 1;
+        List<String> intervalSet;
+        List<TInputClause> conditionHeaders = d.getInput();
+
+        int rowsToCreate;
+        TUnaryTests enumCell = null;
+
+        List<String> stringEnumerations = new ArrayList<>();
+        List<String> theOneEnumList = new ArrayList<>(); // hack
+
+        final class enumField {
+            private int index;
+            private List<String> enumerationValues = new ArrayList<>();
+        }
+
+        List<enumField> efs =new ArrayList<>();
+
+        this.tableRow = s.createRow(this.row++);
+
+        for (TUnaryTests t : r.getInputEntry()) {
+            conditionCell = this.tableRow.createCell(rowCell++);
+            testIndex = r.getInputEntry().indexOf(t);
+
+            switch (this.getAction(conditionHeaders,testIndex)){
+
+                case "interval":
+                    if (t.getText().contains("..")) {
+                        intervalSet = this.getIntervalCells(t);
+                        // write left part
+                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(0));
+                        // create cell, write right part
+                        conditionCell = this.tableRow.createCell(rowCell++);
+                        this.formatAndSetConditionCell(conditionCell, intervalSet.get(1));
+                    } else {
+                        // one with value, one empty
+                        this.formatAndSetConditionCell(conditionCell, t.getText());
+                        conditionCell = this.tableRow.createCell(rowCell++);
+                        this.formatAndSetConditionCell(conditionCell, "-");
+                    }
+                    break;
+
+                case "enumeration":
+                    if (enumT != null && enumT == t) {
+                        this.formatAndSetConditionCell(conditionCell, enumValue);
+                    } else {
+                        Pattern p = Pattern.compile("(\"[\\w\\s]+\")");
+                        Matcher m = p.matcher(t.getText());
+
+                        if (m.find()) {
+                            enumCell = t;
+                            m.reset();
+                            while (m.find()) {
+                                stringEnumerations.add(m.group(1));
+                            }
+                            // to get one row with more than one enumvalue in the same column working, this hack is necessary
+
+                            if ( stringEnumerations.size() > 1)
+                            { theOneEnumList.addAll(stringEnumerations);}
+
+                            enumField ef = new enumField();
+                            ef.index = testIndex;
+                            ef.enumerationValues = stringEnumerations;
+                            efs.add(ef);
+
+                            //      no matter what, select first find and put it in the row
+                            this.formatAndSetConditionCell(conditionCell, stringEnumerations.get(0));
+                            stringEnumerations.clear();
+                        } else {  this.formatAndSetConditionCell(conditionCell, "-"); }
+                    }
+                    break;
+                case "normal":
+                    this.formatAndSetConditionCell(conditionCell, t.getText());
+            }
+            // if last cell is written, then write extra rows if needed
+            createConclusionCell(r); // conclude last row
+            if (r.getInputEntry().indexOf(t) == r.getInputEntry().size() - 1) { // all elements of the row have been processed
+                // this is not a nice solution, but because of the complexity of this feature, it will have to do for now.
+                rowsToCreate = theOneEnumList.size() - 1;
+                if (rowsToCreate > 0) {
+
+                    for (int i = 1; i <= rowsToCreate ; i++) {
+                        createRow(d, r, s, enumCell, theOneEnumList.get(i));
+                        createConclusionCell(r);
+                    }
+                }
+            }
+        }
+    }
+
+    private void createConclusionCell(TDecisionRule r){
+
+        XSSFCell conclusionCell;
+        int rowCell = this.conditionRows + 1;
+        // 1 or more conclusion rows
+        List<TLiteralExpression> expressionList = r.getOutputEntry();
+        for (TLiteralExpression l : expressionList) {
+            conclusionCell = this.tableRow.createCell(rowCell++);
+            conclusionCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
+            conclusionCell.setCellValue(ft.transformFunctions(l.getText()));
+        }
+    }
+
+    private void removeTemplates(){
+
+        int index;
+        XSSFSheet sheet;
+
+        sheet = this.workbook.getSheet("Regeltabel");
+        if(sheet != null)   {
+            index = workbook.getSheetIndex(sheet);
+            workbook.removeSheetAt(index);
+        }
+
+        sheet = this.workbook.getSheet("Declaraties");
+        if(sheet != null)   {
+            index = workbook.getSheetIndex(sheet);
+            workbook.removeSheetAt(index);
+        }
+    }
     private void getOpaStyles(){
 
         this.OPM_CONCLUSION_HEADING_STYLE = getNamedCellStyle(this.workbook, "OPM - Conclusion Heading");
@@ -104,7 +341,7 @@ public class opmWorkbookDmn11 {
         this.OPM_COMMENTARY_STYLE = getNamedCellStyle(this.workbook, "OPM - Commentary");
     }
 
-    static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
+    private static XSSFCellStyle getNamedCellStyle(XSSFWorkbook workbook, String name) {
 
         StylesTable stylestable = workbook.getStylesSource();
         CTStylesheet ctstylesheet = stylestable.getCTStylesheet();
@@ -113,7 +350,7 @@ public class opmWorkbookDmn11 {
 
         if (ctcellstyles != null) {
             int i = 0;
-            XSSFCellStyle style = null;
+            XSSFCellStyle style;
             while((style = stylestable.getStyleAt(i++)) != null) {
                 CTXf ctxfcore = style.getCoreXf();
                 long xfid = ctxfcore.getXfId();
@@ -127,163 +364,44 @@ public class opmWorkbookDmn11 {
         return workbook.getCellStyleAt(0); //if nothing found return default cell style
     }
 
-    private void createCommentaryID(TDecisionTable dectable, XSSFSheet sheet) {
+    private String getAction(List<TInputClause> ch, int t){
 
-        int rowcell = 1;
-        XSSFCell commentCell;
 
-        this.tableRow = sheet.createRow(this.row++);
-        commentCell = this.tableRow.createCell(rowcell);
-        commentCell.setCellStyle(this.OPM_COMMENTARY_STYLE);
-        commentCell.setCellValue(dectable.getId());
+        if(!this.intervalHeaders.isEmpty() && this.intervalHeaders.contains(ch.get(t))){
+            return "interval";
+        }
 
+        if (!this.enumerationColumns.isEmpty()&& this.enumerationColumns.contains(ch.get(t))) {
+            return "enumeration";
+        }
+
+        return "normal";
     }
 
-    private void getIntervalHeaders(TDecisionTable dectable){
+    private List<String> getIntervalCells(TUnaryTests t) {
 
-        // find intervals, they will lead to an extra column in OPA
-        List<TDecisionRule> decrules = dectable.getRule();
-        List<TInputClause> conditionheaders = dectable.getInput();
-        int testIndex;
+        List<String> intervals = new ArrayList<>();
 
-        for (TDecisionRule r : decrules) {
-            for (TUnaryTests t : r.getInputEntry()) {
-                if (t.getText().contains("..")) {
-                    testIndex = r.getInputEntry().indexOf(t);
-                    if (!this.intervalHeaders.contains(conditionheaders.get(testIndex))){
-                        this.intervalHeaders.add(conditionheaders.get(testIndex));
-                    }
-                }
-            }
+        Pattern p= Pattern.compile("(\\(|\\[)([0-9]+)\\.\\.([0-9]+)(\\)|])");
+        Matcher m = p.matcher(t.getText());
+
+        if (m.find()) {
+            if (m.group(1).equals("[")) intervals.add(">=" + m.group(2));
+            if (m.group(1).equals("(")) intervals.add(">" + m.group(2));
+            if (m.group(4).equals("]")) intervals.add("<=" + m.group(3));
+            if (m.group(4).equals(")")) intervals.add("<" + m.group(3));
         }
+
+        return intervals;
     }
 
-    private void createTableHeaders(TDecisionTable dectable, XSSFSheet sheet){
+    private void formatAndSetConditionCell(XSSFCell c,  String s){
 
-        List<TInputClause> conditionheaders;
-        List<TOutputClause> conclusionheaders;
-        conditionheaders = dectable.getInput();
-        conclusionheaders = dectable.getOutput();
-        XSSFCell condCell;
-        XSSFCell conclCell;
-        CellRangeAddress headerRegion;
-
-        int rowcell = 1; // start from B = 1;
-        this.condRows = conditionheaders.size();
-        // createHeaders
-        this.tableRow = sheet.createRow(this.row++);
-        for (TInputClause c : conditionheaders) {
-            condCell = this.tableRow.createCell(rowcell++);
-            condCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
-            condCell.setCellValue(c.getInputExpression().getText());
-            if (intervalHeaders != null) {
-                if (intervalHeaders.contains(c))
-                // create extra column for interval
-                {
-                    this.condRows++;
-                    condCell = this.tableRow.createCell(rowcell++);
-                    condCell.setCellStyle(this.OPM_CONDITION_HEADING_STYLE);
-                    headerRegion = new CellRangeAddress(2, 2, rowcell - 2, rowcell - 1);
-                    sheet.addMergedRegion(headerRegion);
-                }
-            }
+        if( s.length() == 1 && s.indexOf("-") == 0 ){
+            c.setCellStyle(this.OPM_CONDITION_STYLE);
+        } else {
+            c.setCellValue(ft.transformFunctions(s));
+            c.setCellStyle(this.OPM_CONDITION_STYLE);
         }
-        if (conclusionheaders.size() == 1) {
-            conclCell = this.tableRow.createCell(rowcell);
-            conclCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
-            conclCell.setCellValue(dectable.getOutputLabel());
-        }
-        if (conclusionheaders.size() > 1) {
-            for (TOutputClause o : conclusionheaders){
-                conclCell = this.tableRow.createCell(rowcell++);
-                conclCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
-                conclCell.setCellValue(o.getName());
-            }
-        }
-    }
-
-    private void createConditionRow(TDecisionTable dectable, TDecisionRule r, XSSFSheet sheet){
-
-        XSSFCell condCell;
-        XSSFCell condCellRightPart;
-        String leftPart;
-        String rightPart;
-        String leftInterval;
-        String rightInterval;
-        int testIndex;
-        int dashIndex;
-        int rowcell = 1;
-        List<TInputClause> conditionheaders = dectable.getInput();
-
-        this.tableRow = sheet.createRow(this.row++);
-
-        for (TUnaryTests t : r.getInputEntry()) {
-            condCell = this.tableRow.createCell(rowcell++);
-            condCell.setCellStyle(this.OPM_CONDITION_STYLE);
-            testIndex = r.getInputEntry().indexOf(t);
-
-            if(t.getText().length() == 1 && t.getText().indexOf("-") == 0 ){
-                // Write nothing
-            } else if(!this.intervalHeaders.isEmpty()) { //there are intervals
-                if (this.intervalHeaders.contains(conditionheaders.get(testIndex))){//there are intervals in this column
-                    condCellRightPart = this.tableRow.createCell(rowcell++);
-                    condCellRightPart.setCellStyle(this.OPM_CONDITION_STYLE);
-                    if (t.getText().contains("..")){ // there are intervals in this row
-                        //interval <= < etc   --- "[" = ">=", "]" = "<="  "(" = ">" , ")" = "<"
-                        dashIndex = t.getText().indexOf("..");
-                        if ((t.getText().substring(0,1)) == "[") {
-                            leftInterval = ">=";
-                        } else { leftInterval = ">";}
-                        if ((t.getText().substring(dashIndex+1,dashIndex+2)) == "]") {
-                            rightInterval = "<=";
-                        } else { rightInterval = "<";}
-
-                        leftPart = t.getText().substring(1,dashIndex);
-                        condCell.setCellValue(leftInterval+leftPart);
-                        rightPart = t.getText().substring(dashIndex+2,t.getText().length()-1);
-                        condCellRightPart.setCellValue(rightInterval+rightPart);
-                    } else {condCell.setCellValue(ft.transformFunctions(t.getText())); }
-                } else {condCell.setCellValue(ft.transformFunctions(t.getText())); }
-            } else { condCell.setCellValue(ft.transformFunctions(t.getText()));}
-        }
-    }
-
-    private void createConclusionRow(TDecisionRule r){
-
-        XSSFCell conclCell;
-        int rowcell = this.condRows + 1;
-        // 1 or more conclusion rows
-        List<TLiteralExpression> llist = r.getOutputEntry();
-        for (TLiteralExpression l : llist) {
-            conclCell = this.tableRow.createCell(rowcell++);
-            conclCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            conclCell.setCellValue(ft.transformFunctions(l.getText()));
-        }
-    }
-
-    private void createTableFields(TDecisionTable dectable, XSSFSheet sheet){
-
-        int rowcell = this.condRows + 1;
-
-        List<TDecisionRule> decrules = dectable.getRule();
-        for (TDecisionRule r : decrules) {
-            this.createConditionRow(dectable, r, sheet);
-            this.createConclusionRow(r);
-        }
-
-        // Else uncertain
-        List<TOutputClause> conclusionheaders;
-        conclusionheaders = dectable.getOutput();
-        this.tableRow = sheet.createRow(this.row++);
-        XSSFCell conclCell;
-        // conclusion else
-        for (TOutputClause o : conclusionheaders) {
-            conclCell = this.tableRow.createCell(rowcell++);
-            conclCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            conclCell.setCellValue("uncertain");
-        }
-        XSSFCell elseCell = this.tableRow.createCell(this.condRows);
-        elseCell.setCellStyle(this.OPM_ELSE_STYLE);
-        elseCell.setCellValue("else");
     }
 }
