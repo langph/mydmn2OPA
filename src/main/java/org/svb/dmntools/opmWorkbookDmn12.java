@@ -3,6 +3,7 @@ package org.svb.dmntools;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,7 +37,6 @@ public class opmWorkbookDmn12 {
     private int conditionRows; //number of condition rows
     private FunctionTranslator ft;
     private List<TInputClause> enumerationColumns = new ArrayList<>();
-
 
 
     public static void startConversion(File opaExcelTemplate, File opaExcelfile,File xmlFile, FunctionTranslator ft){
@@ -88,12 +88,16 @@ public class opmWorkbookDmn12 {
     private void createOpmSheet(TDecision dec){
 
         JAXBElement<? extends TExpression> expr = dec.getExpression();
+        XSSFSheet sheet;
 
         if (expr.getValue().getClass() == TDecisionTable.class) {
+
             TDecisionTable dectable = (TDecisionTable) expr.getValue();
-            XSSFSheet sheet = this.workbook.createSheet(dec.getName());
-            // Hitpolicy moet unique zijn
-            this.getIntervalHeaders(dectable);
+            //System.out.println(dec.getName());
+            // sheets will have no name set, it leads to duplicate sheets errors, when the length of the name exceeds
+            // a certain amount of characters and the characters before it are the same between tables
+            sheet = this.workbook.createSheet();
+
             this.createCommentaryID(dectable,sheet);
             this.createTableHeaders(dectable, sheet);
             this.createTableFields(dectable, sheet);
