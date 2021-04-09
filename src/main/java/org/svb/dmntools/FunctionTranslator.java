@@ -86,13 +86,13 @@ public class FunctionTranslator {
 
         fu = new Function();
         fu.setFeelFunction("date\\((\"[12]\\d{3}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])\")\\)");
-        fu.setOpaFunction("Date($1)");
+        fu.setOpaFunction("MakenDatum($1)");
         fu.setRegex(false);
         this.add(fu);
 
         fu = new Function();
         fu.setFeelFunction("date\\(([12]\\d{3}),(\\d{2}),(\\d{2})\\)");
-        fu.setOpaFunction("Date($1;$2;$3)");
+        fu.setOpaFunction("MakenDatum($1;$2;$3)");
         fu.setRegex(false);
         this.add(fu);
 
@@ -134,7 +134,7 @@ public class FunctionTranslator {
                 transformedInput = transformedInput.replace(fu.getFeelFunctionName(),fu.getOpaFunctionName());
             }
         }
-        transformedInput = transformedInput.replace(".", "," );
+        transformedInput = transformedInput.replace(",", ";" );
         return  transformedInput;
     }
 

@@ -49,9 +49,9 @@ public class opmWorkbookDmn11 {
             JAXBContext jc = JAXBContext.newInstance("org.svb.dmn12");
             Unmarshaller u = jc.createUnmarshaller();
             JAXBElement je = (JAXBElement) u.unmarshal(xmlFile);
-            TDefinitions dmndef = (TDefinitions) je.getValue();
+            TDefinitions dmnDef = (TDefinitions) je.getValue();
             List<JAXBElement<? extends TDRGElement>> jes;
-            jes = dmndef.getDrgElement();
+            jes = dmnDef.getDrgElement();
             work.createOpmWorkbook(opaExcelTemplate, opaExcelfile, jes);
 
         } catch (Exception ex) {
@@ -90,13 +90,13 @@ public class opmWorkbookDmn11 {
         JAXBElement<? extends TExpression> expr = dec.getExpression();
 
         if (expr.getValue().getClass() == TDecisionTable.class) {
-            TDecisionTable dectable = (TDecisionTable) expr.getValue();
+            TDecisionTable decTable = (TDecisionTable) expr.getValue();
             XSSFSheet sheet = this.workbook.createSheet(dec.getName());
             // Hitpolicy moet unique zijn
-            this.getIntervalHeaders(dectable);
-            this.createCommentaryID(dectable,sheet);
-            this.createTableHeaders(dectable, sheet);
-            this.createTableFields(dectable, sheet);
+            this.getIntervalHeaders(decTable);
+            this.createCommentaryID(decTable,sheet);
+            this.createTableHeaders(decTable, sheet);
+            this.createTableFields(decTable, sheet);
         }
     }
 

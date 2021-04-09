@@ -92,15 +92,24 @@ public class opmWorkbookDmn12 {
 
         if (expr.getValue().getClass() == TDecisionTable.class) {
 
-            TDecisionTable dectable = (TDecisionTable) expr.getValue();
+            TDecisionTable decTable = (TDecisionTable) expr.getValue();
             //System.out.println(dec.getName());
             // sheets will have no name set, it leads to duplicate sheets errors, when the length of the name exceeds
             // a certain amount of characters and the characters before it are the same between tables
             sheet = this.workbook.createSheet();
+            this.getIntervalHeaders(decTable);
+            this.createCommentaryID(decTable,sheet);
+            this.createTableHeaders(decTable, sheet);
+            this.createTableFields(decTable, sheet);
+        }
+        else if (expr.getValue().getClass() == TLiteralExpression.class) {
 
-            this.createCommentaryID(dectable,sheet);
-            this.createTableHeaders(dectable, sheet);
-            this.createTableFields(dectable, sheet);
+            TLiteralExpression litEx = (TLiteralExpression) expr.getValue();
+            sheet = this.workbook.createSheet();
+            this.createCommentaryID(litEx,sheet);
+            this.createLiteralExpression(dec.getName(), litEx.getText(), sheet);
+
+
         }
     }
 
@@ -123,7 +132,7 @@ public class opmWorkbookDmn12 {
         }
     }
 
-    private void createCommentaryID(TDecisionTable d, XSSFSheet s) {
+    private void createCommentaryID(TDMNElement el, XSSFSheet s) {
 
         int rowCell = 1;
         XSSFCell commentCell;
@@ -131,9 +140,27 @@ public class opmWorkbookDmn12 {
         this.tableRow = s.createRow(this.row++);
         commentCell = this.tableRow.createCell(rowCell);
         commentCell.setCellStyle(this.OPM_COMMENTARY_STYLE);
-        commentCell.setCellValue(d.getId());
+        commentCell.setCellValue(el.getId());
 
     }
+
+    private void createLiteralExpression(String name, String expr, XSSFSheet s){
+
+        int rowCell = 1;
+        this.tableRow = s.createRow(this.row++);
+        XSSFCell conclusionHeaderCell;
+        XSSFCell conclusionCell;
+
+        conclusionHeaderCell = this.tableRow.createCell(rowCell);
+        conclusionHeaderCell.setCellStyle(this.OPM_CONCLUSION_HEADING_STYLE);
+        conclusionHeaderCell.setCellValue(name);
+
+        this.tableRow = s.createRow(this.row++);
+        conclusionCell = this.tableRow.createCell(rowCell++);
+        conclusionCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
+        conclusionCell.setCellValue(ft.transformFunctions(expr));
+    }
+
 
     private void createTableHeaders(TDecisionTable d, XSSFSheet s){
 
@@ -205,11 +232,11 @@ public class opmWorkbookDmn12 {
         for (TOutputClause ignored : conclusionHeaders) {
             c = this.tableRow.createCell(rowCell++);
             c.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            c.setCellValue("uncertain");
+            c.setCellValue("onzeker");
         }
         XSSFCell elseCell = this.tableRow.createCell(this.conditionRows);
         elseCell.setCellStyle(this.OPM_ELSE_STYLE);
-        elseCell.setCellValue("else");
+        elseCell.setCellValue("anders");
     }
 
     private void createRow(TDecisionTable d, TDecisionRule r, XSSFSheet s, TUnaryTests enumT, String enumValue){
@@ -310,12 +337,16 @@ public class opmWorkbookDmn12 {
 
         XSSFCell conclusionCell;
         int rowCell = this.conditionRows + 1;
+        String text;
+
         // 1 or more conclusion rows
         List<TLiteralExpression> expressionList = r.getOutputEntry();
         for (TLiteralExpression l : expressionList) {
+            text = l.getText();
             conclusionCell = this.tableRow.createCell(rowCell++);
             conclusionCell.setCellStyle(this.OPM_CONCLUSION_STYLE);
-            conclusionCell.setCellValue(ft.transformFunctions(l.getText()));
+            text = this.translateLanguage(text);
+            conclusionCell.setCellValue(ft.transformFunctions(text));
         }
     }
 
@@ -402,11 +433,26 @@ public class opmWorkbookDmn12 {
 
     private void formatAndSetConditionCell(XSSFCell c,  String s){
 
+        String ls = s;
+
         if( s.length() == 1 && s.indexOf("-") == 0 ){
             c.setCellStyle(this.OPM_CONDITION_STYLE);
         } else {
-            c.setCellValue(ft.transformFunctions(s));
+            ls = ft.transformFunctions(s);
+            ls = translateLanguage(ls);
+            c.setCellValue(ls);
             c.setCellStyle(this.OPM_CONDITION_STYLE);
         }
+    }
+
+    private String translateLanguage(String s){
+
+        String ts = s;
+
+        ts = ts.replace("false","ONWAAR");
+        ts = ts.replace("true","WAAR");
+
+        return ts;
+
     }
 }

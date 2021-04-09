@@ -2,12 +2,18 @@ package org.svb.dmnToolWindow;
 
 
 import org.svb.dmntools.FunctionTranslator;
-import org.svb.dmntools.*;
+import org.svb.dmntools.opmWorkbookDmn11;
+import org.svb.dmntools.opmWorkbookDmn12;
+
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.event.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
 
 public class MainWindow extends JPanel implements ActionListener {
 
@@ -78,10 +84,25 @@ public class MainWindow extends JPanel implements ActionListener {
             FunctionTranslator ft = new FunctionTranslator();
             ft.createFunctionInstances();
 
+           try {
             if (dmn11.isSelected()) {
                 opmWorkbookDmn11.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
             } else {
                 opmWorkbookDmn12.startConversion(opaExcelTemplate, opaExcelfile, xmlFile, ft);
+            }
+
+
+        } catch (Exception ex) {
+            result.setText("Error occurred");
+            try {
+                FileHandler handler = new FileHandler("default.log", true);
+                Logger logger = Logger.getLogger("org.svb.dmnToolWindow");
+                logger.addHandler(handler);
+                logger.severe(ex.getMessage());
+
+               } catch (IOException exc) {
+                   exc.printStackTrace();
+               }
             }
             result.setVisible(true);
         }
